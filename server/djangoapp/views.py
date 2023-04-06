@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def get_dealerships(request):
     if request.method == "GET":
         context = {}
-        url = "https://us-south.functions.appdomain.cloud/api/v1/web/f9edeb8c-b62d-4df6-b187-b0b44f9902b3/dealership-package/getdealershipsp"
+        url = "https://us-south.functions.appdomain.cloud/api/v1/web/9a30bf24-cab6-4bb0-b672-96218b32da7d/dealership_package/get-dealership.json"
         # Get dealers from the Cloudant DB
         context["dealerships"] = get_dealers_from_cf(url)
 
@@ -165,3 +165,4 @@ def add_review(request, dealer_id):
         # If user isn't logged in, redirect to login page
         print("User must be authenticated before posting a review. Please log in.")
         return redirect("/djangoapp/login")
+

@@ -3,7 +3,7 @@ import json
 import os
 from .models import CarDealer, DealerReview
 from requests.auth import HTTPBasicAuth
-
+from decouple import config
 from ibm_watson import NaturalLanguageUnderstandingV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_watson.natural_language_understanding_v1 import Features, SentimentOptions
@@ -51,20 +51,26 @@ def post_request(url, json_payload, **kwargs):
 # Gets all dealers from the Cloudant DB with the Cloud Function get-dealerships
 def get_dealers_from_cf(url):
     results = []
-    json_result = get_request(url)
-    # Retrieve the dealer data from the response
-    dealers = json_result["body"]["rows"]
-    # For each dealer in the response
-    for dealer in dealers:
-        # Get its data in `doc` object
-        dealer_doc = dealer["doc"]
-        # Create a CarDealer object with values in `doc` object
-        dealer_obj = CarDealer(address=dealer_doc["address"], city=dealer_doc["city"], full_name=dealer_doc["full_name"],
-                               id=dealer_doc["id"], lat=dealer_doc["lat"], long=dealer_doc["long"],
-                               short_name=dealer_doc["short_name"],
-                               st=dealer_doc["st"], state=dealer_doc["state"], zip=dealer_doc["zip"])
-        results.append(dealer_obj)
-
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        json_data = response.json()
+        dealers = json_data['result']
+        for dealer in dealers:
+            doc = dealer['doc']
+            dealer_info = {
+                'id': doc['id'],
+                'full_name': doc['full_name'],
+                'address': doc['address'],
+                'city': doc['city'],
+                'state': doc['state'],
+                'zip': doc['zip'],
+                'lat': doc['lat'],
+                'long': doc['long']
+            }
+            results.append(dealer_info)
+    except (requests.exceptions.RequestException, ValueError) as e:
+        print(f'Error while retrieving dealers: {e}')
     return results
 
 
@@ -151,3 +157,35 @@ def get_dealer_reviews_from_cf(url, dealer_id):
     return results
 
 
+# Calls the Watson NLU API and analyses the sentiment of a review
+def analyze_review_sentiments(review_text):
+    # Watson NLU configuration
+    try:
+        if os.environ['env_type'] == 'PRODUCTION':
+            url = os.environ['WATSON_NLU_URL']
+            api_key = os.environ["WATSON_NLU_API_KEY"]
+    except KeyError:
+        url = config('WATSON_NLU_URL')
+        api_key = config('WATSON_NLU_API_KEY')
+
+    version = '2021-08-01'
+    authenticator = IAMAuthenticator(api_key)
+    nlu = NaturalLanguageUnderstandingV1(
+        version=version, authenticator=authenticator)
+    nlu.set_service_url(url)
+
+    # get sentiment of the review
+    try:
+        response = nlu.analyze(text=review_text, features=Features(
+            sentiment=SentimentOptions())).get_result()
+        print(json.dumps(response))
+        # sentiment_score = str(response["sentiment"]["document"]["score"])
+        sentiment_label = response["sentiment"]["document"]["label"]
+    except:
+        print("Review is too short for sentiment analysis. Assigning default sentiment value 'neutral' instead")
+        sentiment_label = "neutral"
+
+    # print(sentiment_score)
+    print(sentiment_label)
+
+    return sentiment_label
