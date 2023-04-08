@@ -101,7 +101,7 @@ def get_dealer_by_id(url, dealer_id):
 
     # Create a CarDealer object from response
     dealer = dealer_info
-    print(dealer)
+ 
     dealer_obj = CarDealer(address=dealer["address"], city=dealer["city"], full_name=dealer["full_name"],
                            id=dealer["id"], lat=dealer["lat"], long=dealer["long"],
                            short_name=dealer["short_name"],
@@ -139,8 +139,11 @@ def get_dealer_reviews_from_cf(url, dealer_id):
         json_data = response.json()
       
         reviews = json_data['result']
+    except(requests.exceptions.RequestException, ValueError) as e :
+        print(f'Error while retrieving reviews: {e}')
         
-        for review in reviews:
+    for review in reviews:
+        try :
             doc = review['doc']
            
           
@@ -159,27 +162,30 @@ def get_dealer_reviews_from_cf(url, dealer_id):
             }
             
             results.append(review_info)
-    except(requests.exceptions.RequestException, ValueError) as e :
-        print(f'Error while retrieving reviews: {e}')
+ 
     
                 # Creating a review object
-        review_obj = DealerReview(dealership=dealership, id=id, name=name, 
-                                          purchase=purchase, review=review_content, car_make=car_make, 
-                                          car_model=car_model, car_year=car_year, purchase_date=purchase_date
-                                          )
+            
+            review_obj = DealerReview(dealership= doc.get('dealership'), id=id, name =doc.get('name'),
+                                          purchase=doc.get('purchase'), review=doc.get('review'), car_make=doc.get('car_make'),
+                                          car_model=doc.get('car_model'), car_year=doc.get('car_year'), purchase_date=doc.get('purchase_date')
+                                             )
+         
+        
 
-    except KeyError:
+        except KeyError:
             print("Something is missing from this review. Using default values.")
             # Creating a review object with some default values
             review_obj = DealerReview(
                 dealership=dealership, id=id, name=name, purchase=purchase, review=review_content)
 
             # Analysing the sentiment of the review object's review text and saving it to the object attribute "sentiment"
-            review_obj.sentiment = analyze_review_sentiments(review_obj.review)
-            print(f"sentiment: {review_obj.sentiment}")
+        review_obj.sentiment = analyze_review_sentiments(review_obj.review)
+        print(review_obj.review)
+        print(f"sentiment: {review_obj.sentiment}")
 
             # Saving the review object to the list of results
-            results.append(review_obj)
+        results.append(review_obj)
 
  
     return results
@@ -192,6 +198,7 @@ def analyze_review_sentiments(review_text):
         
             url = 'https://api.au-syd.natural-language-understanding.watson.cloud.ibm.com/instances/41880061-1232-43d5-aa05-63718ee659b2'
             api_key = "nCH1Flo_SQOLZqF9VwMvhR7o6V-xJr0SkXItHNhWMqFM"
+            print("1///////////////////////")
     except KeyError:
         print(err)
 

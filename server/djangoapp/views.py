@@ -107,8 +107,8 @@ def get_dealer_details(request, dealer_id):
     if request.method == "GET":
         url = 'https://us-south.functions.appdomain.cloud/api/v1/web/9a30bf24-cab6-4bb0-b672-96218b32da7d/dealership_package/get-reviews.json'
         reviews = get_dealer_reviews_from_cf(url, dealer_id=dealer_id)
-        for review in reviews:
-           print(review)
+
+        
         context = {
             "reviews":  reviews, 
             "dealer_id": dealer_id
